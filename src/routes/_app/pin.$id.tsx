@@ -1,9 +1,17 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link , useRouter } from "@tanstack/react-router";
-import { Flag, Heart, Link2, Loader2, Pencil } from "lucide-react";
+import { Flag, Heart, Link2, Loader2 } from "lucide-react";
+import { useForm } from "@tanstack/react-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Icon } from "@/components/ui/icon";
+import { feedback } from "@/components/ui/toaster";
+import { fieldError } from "@/lib/auth-forms";
+import {
+  DescriptionField, MuseCombobox, NsfwField, SourceField, TagsField, TitleField,
+  musesField, titleField,
+} from "@/components/pin-fields";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogBody, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -352,7 +360,22 @@ function PinPage() {
             {meUser && meUser.id !== pin.userId && (
               <ReportDialog targetType="pin" targetId={id} />
             )}
-            {meUser?.id === pin.userId && <EditPinDialog pin={{ id, title: pin.title, description: pin.description ?? "", sourceUrl: pin.sourceUrl ?? "", tags: pin.tags ?? [] }} />}
+            {meUser?.id === pin.userId && (
+              <EditPinDialog
+                pin={{
+                  id: pin.id,
+                  title: pin.title,
+                  description: pin.description,
+                  sourceUrl: pin.sourceUrl,
+                  tags: pin.tags,
+                  isNsfw: pin.isNsfw,
+                  imageUrl: pin.imageUrl,
+                  width: pin.width,
+                  height: pin.height,
+                }}
+                muses={muses}
+              />
+            )}
             {meUser?.id === pin.userId && (
               <Button size="sm" variant="danger" loading={remove.isPending} onClick={() => remove.mutate()}>
                 Delete
@@ -517,59 +540,177 @@ function ReportDialog({
 }
 
 
-function EditPinDialog({ pin }: { pin: { id: string; title: string; description: string; sourceUrl: string; tags: string[] } }) {
-  const qc = useQueryClient();
+type EditPinData = {
+  pin: {
+    id: string;
+    title: string;
+    description: string | null | undefined;
+    sourceUrl: string | null | undefined;
+    tags: string[] | null | undefined;
+    isNsfw: boolean;
+    imageUrl: string;
+    width: number | null | undefined;
+    height: number | null | undefined;
+  };
+  muses: { name: string }[];
+};
+
+function EditPinDialog({ pin, muses }: EditPinData) {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(pin.title);
-  const [description, setDescription] = useState(pin.description);
-  const [sourceUrl, setSourceUrl] = useState(pin.sourceUrl);
-  const [tags, setTags] = useState(pin.tags.join(", "));
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Icon name="pencil" /> Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent
+        style={{ width: "min(900px, calc(100% - 24px))" }}
+        className="[max-height:calc(100dvh_-_24px)] [overflow:auto]"
+      >
+        <DialogHeader>
+          <DialogTitle>Edit pin</DialogTitle>
+        </DialogHeader>
+        {open && <EditPinForm pin={pin} muses={muses} onDone={() => setOpen(false)} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditPinForm({ pin, muses, onDone }: EditPinData & { onDone: () => void }) {
+  const qc = useQueryClient();
+  const { data: meUser } = useQuery({ queryKey: ["me"], queryFn: me });
+  const isAdmin = meUser?.role === "admin";
+
+  const form = useForm({
+    defaultValues: {
+      title: pin.title,
+      description: pin.description ?? "",
+      sourceUrl: pin.sourceUrl ?? "",
+      muses: muses.map((m) => m.name),
+      tags: pin.tags ?? [],
+      isNsfw: pin.isNsfw,
+    },
+    onSubmit: async ({ value }) => {
+      await save.mutateAsync({
+        id: pin.id,
+        title: value.title.trim(),
+        description: value.description.trim() || undefined,
+        sourceUrl: value.sourceUrl.trim() || "",
+        tags: value.tags,
+        museTags: value.muses,
+        isNsfw: isAdmin ? value.isNsfw : undefined,
+      });
+    },
+  });
+
   const save = useMutation({
-    mutationFn: () =>
-      updatePin({
-        data: {
-          id: pin.id,
-          title: title.trim(),
-          description: description.trim() || undefined,
-          sourceUrl: sourceUrl.trim() || "",
-          tags: tags.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 12),
-        },
-      }),
+    mutationFn: (v: {
+      id: string;
+      title: string;
+      description?: string;
+      sourceUrl: string;
+      tags: string[];
+      museTags: string[];
+      isNsfw?: boolean;
+    }) => updatePin({ data: v }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pin", pin.id] });
       qc.invalidateQueries({ queryKey: ["feed"] });
       qc.invalidateQueries({ queryKey: ["feedPages"] });
       qc.invalidateQueries({ queryKey: ["related", pin.id] });
-      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["museSearch"] });
+      qc.invalidateQueries({ queryKey: ["topMuses"] });
+      feedback.show("Pin updated");
+      onDone();
+    },
+    onError: () => {
+      feedback.error("Couldn't save changes", { description: "Try again in a moment." });
     },
   });
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Pencil className="size-4" /> Edit
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit pin</DialogTitle>
-        </DialogHeader>
-        <DialogBody className="flex flex-col gap-3">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" maxLength={100} />
-          <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" rows={3} maxLength={500} />
-          <Input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="Source URL (optional)" />
-          <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Tags, comma separated" />
-        </DialogBody>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="ghost" size="sm">Cancel</Button>
-          </DialogClose>
-          <Button variant="accent" size="sm" disabled={!title.trim() || save.isPending} onClick={() => save.mutate()}>
-            {save.isPending ? <Loader2 className="size-4 animate-spin" /> : "Save"}
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
+      <DialogBody className="v-dialog__split" style={{ "--h": "min(720px, calc(100dvh - 230px))" }}>
+        <div className="flex w-full flex-col gap-3 self-start rounded-[var(--r-card)] bg-[var(--v-beige)] p-4">
+          <div className="overflow-hidden rounded-[var(--r-card-sm)] border border-[var(--v-border)]">
+            <img
+              src={pin.imageUrl}
+              alt={pin.title}
+              className="max-h-[420px] w-full object-cover"
+              style={pin.width && pin.height ? { aspectRatio: `${pin.width}/${pin.height}` } : undefined}
+            />
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <form.Field name="title" validators={{ onChange: titleField }}>
+            {(field) => (
+              <TitleField
+                value={field.state.value}
+                onChange={(v) => field.handleChange(v)}
+                onBlur={field.handleBlur}
+                error={fieldError(field)}
+              />
+            )}
+          </form.Field>
+          <form.Field name="description">
+            {(field) => (
+              <DescriptionField
+                value={field.state.value}
+                onChange={(v) => field.handleChange(v)}
+                onBlur={field.handleBlur}
+              />
+            )}
+          </form.Field>
+          <form.Field name="muses" validators={{ onChange: musesField, onSubmit: musesField }}>
+            {(field) => (
+              <MuseCombobox
+                value={field.state.value}
+                onChange={(v) => field.handleChange(v)}
+                error={fieldError(field)}
+              />
+            )}
+          </form.Field>
+          <form.Subscribe selector={(s) => s.values.tags}>
+            {(tags) => <TagsField value={tags} onChange={(v) => form.setFieldValue("tags", v)} />}
+          </form.Subscribe>
+          <form.Field name="sourceUrl">
+            {(field) => (
+              <SourceField
+                value={field.state.value}
+                onChange={(v) => field.handleChange(v)}
+                onBlur={field.handleBlur}
+              />
+            )}
+          </form.Field>
+          {isAdmin && (
+            <form.Subscribe selector={(s) => s.values.isNsfw}>
+              {(isNsfw) => <NsfwField checked={isNsfw} onChange={(v) => form.setFieldValue("isNsfw", v)} />}
+            </form.Subscribe>
+          )}
+        </div>
+      </DialogBody>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="ghost" size="lg" type="button">
+            Cancel
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogClose>
+        <form.Subscribe selector={(s) => !s.canSubmit || s.isSubmitting || s.values.muses.length === 0}>
+          {(disabled) => (
+            <Button variant="accent" size="lg" type="submit" loading={save.isPending} disabled={disabled}>
+              Save
+            </Button>
+          )}
+        </form.Subscribe>
+      </DialogFooter>
+    </form>
   );
 }
 

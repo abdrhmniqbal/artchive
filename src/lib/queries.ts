@@ -431,6 +431,30 @@ export const getPin = createServerFn({ method: "GET" })
     };
   });
 
+type Db = Awaited<ReturnType<typeof getServerContext>>["db"];
+
+/** Resolve muse names by slug or create them on the fly, then link to the pin. */
+async function syncPinMuses(db: Db, pinId: string, tags: string[], userId: string) {
+  for (const tag of tags) {
+    const slug = tag.toLowerCase().trim().replace(/\s+/g, "-");
+    let [m] = await db.select().from(schema.muse).where(eq(schema.muse.slug, slug)).limit(1);
+    if (!m) {
+      [m] = await db
+        .select()
+        .from(schema.muse)
+        .where(sql`lower(${schema.muse.name}) = ${tag.toLowerCase().trim()}`)
+        .limit(1);
+    }
+    if (!m) {
+      [m] = await db
+        .insert(schema.muse)
+        .values({ id: id(), slug, name: tag.trim(), createdBy: userId })
+        .returning();
+    }
+    await db.insert(schema.pinMuse).values({ pinId, museId: m.id }).onConflictDoNothing();
+  }
+}
+
 export const createPin = createServerFn({ method: "POST" })
   .validator(
     z.object({
@@ -466,24 +490,7 @@ export const createPin = createServerFn({ method: "POST" })
       userId: user.id,
     });
     // resolve muse tags by slug or create new muses on the fly
-    for (const tag of data.museTags) {
-      const slug = tag.toLowerCase().trim().replace(/\s+/g, "-");
-      let [m] = await db.select().from(schema.muse).where(eq(schema.muse.slug, slug)).limit(1);
-      if (!m) {
-        [m] = await db
-          .select()
-          .from(schema.muse)
-          .where(sql`lower(${schema.muse.name}) = ${tag.toLowerCase().trim()}`)
-          .limit(1);
-      }
-      if (!m) {
-        [m] = await db
-          .insert(schema.muse)
-          .values({ id: id(), slug, name: tag.trim(), createdBy: user.id })
-          .returning();
-      }
-      await db.insert(schema.pinMuse).values({ pinId, museId: m.id }).onConflictDoNothing();
-    }
+    await syncPinMuses(db, pinId, data.museTags, user.id);
     if (data.collectionId) {
       const [c] = await db
         .select()
@@ -513,11 +520,14 @@ export const updatePin = createServerFn({ method: "POST" })
       description: z.string().optional(),
       sourceUrl: z.string().url().optional().or(z.literal("")),
       tags: z.array(z.string()).max(12).default([]),
+      museTags: z.array(z.string()).max(8).default([]),
+      isNsfw: z.boolean().optional(),
     }),
   )
   .handler(async ({ data }) => {
     const user = await getSessionUser();
     if (!user) throw new Error("Sign in required");
+    if (data.isNsfw !== undefined && user.role !== "admin") throw new Error("Mark as NSFW is admin-only (beta)");
     const { db } = await getServerContext();
     const res = await db
       .update(schema.pin)
@@ -526,10 +536,13 @@ export const updatePin = createServerFn({ method: "POST" })
         description: data.description ?? null,
         sourceUrl: data.sourceUrl || null,
         tags: data.tags.length ? data.tags : null,
+        ...(data.isNsfw !== undefined ? { isNsfw: data.isNsfw } : {}),
       })
       .where(and(eq(schema.pin.id, data.id), eq(schema.pin.userId, user.id)))
       .returning({ id: schema.pin.id });
     if (!res.length) throw new Error("Pin not found or not yours");
+    await db.delete(schema.pinMuse).where(eq(schema.pinMuse.pinId, data.id));
+    await syncPinMuses(db, data.id, data.museTags, user.id);
     return { ok: true };
   });
 
