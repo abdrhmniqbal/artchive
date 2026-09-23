@@ -5,7 +5,6 @@ import { and, desc, eq, like, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";;
 import { createServerFn } from "@tanstack/react-start";
 import { clientIpHash, getServerContext, getHeaders, getSessionUser, rateLimit, toPublicUser } from "./server";
-import { getRequest } from "@tanstack/react-start/server";
 import * as schema from "@/lib/db/schema";
 
 const id = () => crypto.randomUUID();
@@ -66,7 +65,7 @@ export const signup = createServerFn({ method: "POST" })
     const { auth } = await getServerContext();
     const res = await auth.api.signUpEmail({
       body: { email: data.email, password: data.password, name: data.name, username: data.username },
-      headers: getRequest().headers,
+      headers: await getHeaders(),
       asResponse: true,
     });
     if (!res.ok) {
@@ -85,12 +84,12 @@ export const login = createServerFn({ method: "POST" })
     const res = useEmail
       ? await auth.api.signInEmail({
           body: { email: data.identity, password: data.password },
-          headers: getRequest().headers,
+          headers: await getHeaders(),
           asResponse: true,
         })
       : await auth.api.signInUsername({
           body: { username: data.identity, password: data.password },
-          headers: getRequest().headers,
+          headers: await getHeaders(),
           asResponse: true,
         });
     if (!res.ok) {
@@ -147,7 +146,7 @@ export const changePassword = createServerFn({ method: "POST" })
     const { auth } = await getServerContext();
     const res = await auth.api.changePassword({
       body: { currentPassword: data.currentPassword, newPassword: data.newPassword, revokeOtherSessions: true },
-      headers: getRequest().headers,
+      headers: await getHeaders(),
       asResponse: true,
     });
     if (!res.ok) throw new Error("Current password is incorrect.");
@@ -166,7 +165,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
     const { auth } = await getServerContext();
     const res = await auth.api.deleteUser({
       body: data.password ? { password: data.password } : {},
-      headers: getRequest().headers,
+      headers: await getHeaders(),
       asResponse: true,
     });
     if (!res.ok) throw new Error("Could not delete your account. Check your password and try again.");
@@ -175,7 +174,7 @@ export const deleteAccount = createServerFn({ method: "POST" })
 
 export const logout = createServerFn({ method: "POST" }).handler(async () => {
   const { auth } = await getServerContext();
-  const res = await auth.api.signOut({ headers: getRequest().headers, asResponse: true });
+  const res = await auth.api.signOut({ headers: await getHeaders(), asResponse: true });
   const cookies = res.headers.getSetCookie();
   return new Response(null, { status: 200, headers: cookies.length ? { "set-cookie": cookies.join(", ") } : undefined });
 });

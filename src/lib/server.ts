@@ -1,4 +1,3 @@
-import { getRequest } from "@tanstack/react-start/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import type { Env } from "@/lib/env";
@@ -14,6 +13,7 @@ export async function getServerContext() {
 }
 
 export async function getHeaders(): Promise<Headers> {
+  const { getRequest } = await import("@tanstack/react-start/server");
   return getRequest().headers;
 }
 
