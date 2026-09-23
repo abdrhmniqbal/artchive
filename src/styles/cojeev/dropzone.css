@@ -1,0 +1,37 @@
+@layer cojeev-states {
+[data-slot="dropzone"] { position:relative; isolation:isolate; display:grid; justify-items:center; gap:14px; width:100%; min-width:0; padding:30px 24px 24px; border:1.5px dashed var(--v-text-2); border-radius:26px 34px 28px 38px; background:var(--v-canvas); color:var(--v-text); text-align:center; cursor:pointer; transition:background var(--t-element),border-color var(--t-element); }
+[data-slot="dropzone"]:not([aria-disabled="true"]):hover { background:color-mix(in oklab,var(--v-blue) 8%,var(--v-canvas)); border-color:var(--v-text); }
+[data-slot="dropzone"][data-state="over"] { background:color-mix(in oklab,var(--v-blue) 18%,var(--v-canvas)); border:1.5px solid var(--v-text); }
+[data-slot="dropzone"][data-state="error"] { border-color:var(--v-danger-ink); }
+[data-slot="dropzone"]:focus-visible { outline:2px solid var(--ring); outline-offset:4px; }
+[data-slot="dropzone-art"] { position:relative; display:grid; place-items:center; width:104px; height:90px; margin:0 0 4px; }
+[data-slot="dropzone-art"] .v-drop__pebble { position:absolute; width:94px; height:94px; color:var(--v-blue); transform:rotate(-18deg); }
+[data-slot="dropzone-art"] .v-drop__flower { position:absolute; right:-2px; bottom:-2px; width:38px; height:38px; color:var(--v-yellow); transform:rotate(8deg); }
+[data-slot="dropzone-symbol"] { position:relative; display:grid; place-items:center; color:var(--ink-fixed); }
+[data-slot="dropzone-symbol"] .v-icon { width:32px; height:32px; stroke-width:1.8; }
+[data-slot="dropzone-copy"] { display:grid; gap:6px; max-width:38ch; }
+[data-slot="dropzone-copy"] b { font-family:var(--font-display); font-size:22px; font-weight:600; letter-spacing:-.02em; line-height:1.2; }
+[data-slot="dropzone-copy"] > span { font-size:14px; color:var(--v-text-2); line-height:1.45; }
+[data-slot="dropzone-action"] { display:inline-flex; align-items:center; gap:7px; border-bottom:1px solid currentColor; padding-bottom:2px; font-size:13px; font-weight:600; }
+[data-slot="dropzone-action"] .v-icon { width:15px; height:15px; }
+[data-slot="dropzone-help"] { max-width:48ch; font-size:12px; line-height:1.5; color:var(--v-text-2); overflow-wrap:anywhere; }
+[data-slot="dropzone-receipt"] { display:grid; gap:9px; width:100%; min-width:0; margin-top:2px; padding-top:14px; border-top:1px solid var(--v-border); text-align:start; font-size:13px; }
+[data-slot="dropzone-receipt"] > b { font-size:12px; font-weight:600; }
+[data-slot="dropzone-file"] { display:grid; grid-template-columns:16px minmax(0,1fr) auto; gap:8px; align-items:start; }
+[data-slot="dropzone-file"] .v-icon { width:16px; height:16px; }
+[data-slot="dropzone-file"] > span { overflow-wrap:anywhere; line-height:1.4; }
+[data-slot="dropzone-file"] small { color:var(--v-text-2); font-size:11px; line-height:1.6; }
+[data-slot="dropzone-error"] { width:100%; padding:12px 14px; background:color-mix(in oklab,var(--v-danger-ink) 8%,var(--v-canvas)); border-radius:12px; color:var(--v-danger-ink); font-size:13px; line-height:1.5; text-align:start; overflow-wrap:anywhere; }
+[data-slot="dropzone"][aria-disabled="true"] { cursor:not-allowed; color:var(--v-disabled-ink); background:var(--v-disabled-face); border-color:var(--v-disabled-edge); }
+[data-slot="dropzone"][aria-disabled="true"] [data-slot="dropzone-art"] { opacity:.5; }
+[data-slot="dropzone"].-compact { grid-template-columns:60px minmax(0,1fr); justify-items:start; gap:8px 16px; padding:20px; text-align:start; }
+[data-slot="dropzone"].-compact [data-slot="dropzone-art"] { grid-row:1 / 4; width:60px; height:64px; margin:0; }
+[data-slot="dropzone"].-compact .v-drop__pebble { width:62px; height:62px; }
+[data-slot="dropzone"].-compact .v-drop__flower { width:24px; height:24px; }
+[data-slot="dropzone"].-compact [data-slot="dropzone-symbol"] .v-icon { width:24px; height:24px; }
+[data-slot="dropzone"].-compact [data-slot="dropzone-copy"] b { font-size:18px; }
+[data-slot="dropzone"].-compact :is([data-slot="dropzone-help"],[data-slot="dropzone-receipt"],[data-slot="dropzone-error"]) { grid-column:1 / -1; }
+@media(max-width:420px) { [data-slot="dropzone"] { padding:24px 18px 20px; } }
+@media(prefers-reduced-motion:reduce) { [data-slot="dropzone"] { transition:none; } }
+
+}

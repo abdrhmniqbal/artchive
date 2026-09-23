@@ -1,0 +1,1 @@
+ALTER TABLE `pin` ADD `tags` text;

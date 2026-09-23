@@ -1,0 +1,1 @@
+ALTER TABLE `collection_pin` ADD `is_pinned` integer DEFAULT false NOT NULL;

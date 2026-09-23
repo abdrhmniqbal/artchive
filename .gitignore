@@ -1,0 +1,10 @@
+node_modules
+dist
+.dev.vars
+.wrangler
+worker-configuration.d.ts
+prodcheck.cjs
+.env
+.tanstack
+.zed
+component-list.txt

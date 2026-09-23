@@ -1,0 +1,59 @@
+@layer cojeev-states {
+/* Shared example composition, shipped with every choice-family entry. */
+.v-choice-example {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  max-width: 560px;
+  min-width: 0;
+  color: var(--v-text);
+}
+.v-choice-example header {
+  display: grid;
+  gap: 5px;
+}
+.v-choice-example header strong {
+  font-size: 18px;
+  font-weight: 600;
+}
+.v-choice-example header p,
+.v-choice-result {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--v-text-2);
+}
+.v-choice-options {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.v-choice-options[data-approach="chip"] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.v-choice-options[data-approach="card"] {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  align-items: stretch;
+}
+.v-choice-options[data-approach="card"]
+  > :is([data-slot="checkbox"], [data-slot="radio-group-item"]) {
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 16px;
+}
+.v-choice-options[data-approach="card"] [data-slot$="-body"] {
+  gap: 8px;
+}
+/* The summary below already closes the list; a second adjacent rule reads as a seam. */
+.v-choice-options[data-approach="row"]
+  > :is([data-slot="checkbox"], [data-slot="radio-group-item"]):last-child {
+  border-bottom: none;
+}
+.v-choice-result {
+  padding-top: 12px;
+  border-top: 1px solid var(--v-border);
+}
+
+}
