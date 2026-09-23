@@ -6,6 +6,7 @@ import { alias } from "drizzle-orm/sqlite-core";;
 import { createServerFn } from "@tanstack/react-start";
 import { clientIpHash, getServerContext, getHeaders, getSessionUser, rateLimit, toPublicUser } from "./server";
 import * as schema from "@/lib/db/schema";
+import type { getDb } from "@/lib/db";
 
 const id = () => crypto.randomUUID();
 
@@ -430,7 +431,7 @@ export const getPin = createServerFn({ method: "GET" })
     };
   });
 
-type Db = Awaited<ReturnType<typeof getServerContext>>["db"];
+type Db = ReturnType<typeof getDb>;
 
 /** Resolve muse names by slug or create them on the fly, then link to the pin. */
 async function syncPinMuses(db: Db, pinId: string, tags: string[], userId: string) {
