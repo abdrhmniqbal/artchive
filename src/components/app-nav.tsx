@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useMatchRoute, useNavigate } from "@tanstack/react-router";
 import {
   Bell,
@@ -34,7 +34,6 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { feedback } from "@/components/ui/toaster";
 import { humanizeAuthError } from "@/lib/feedback";
-import { getIsAdmin } from "@/lib/admin-flag";
 import {
   AdminNavButton,
   CreatePinDialog,
@@ -176,12 +175,7 @@ function RailInner() {
 
 function UserMenu() {
   const { data: user } = useSessionUser();
-  const { data: isAdmin } = useQuery({
-    queryKey: ["isAdmin", user?.id],
-    queryFn: getIsAdmin,
-    enabled: !!user,
-    staleTime: 60_000,
-  });
+  const isAdmin = user?.role === "admin";
   const qc = useQueryClient();
   const navigate = useNavigate();
   const out = useMutation({

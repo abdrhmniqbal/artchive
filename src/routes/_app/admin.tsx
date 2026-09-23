@@ -9,11 +9,12 @@ import {
 } from "@/components/ui/sidebar.tsx";
 import { MotionDrawer } from "@/components/ui/motion-drawer.tsx";
 import { setAdminNavTrigger } from "@/lib/admin-nav-store";
+import { me } from "@/lib/queries";
 
 export const Route = createFileRoute("/_app/admin")({
   beforeLoad: async () => {
-    const { getIsAdmin } = await import("@/lib/admin-flag");
-    if (!(await getIsAdmin())) throw redirect({ to: "/" });
+    const user = await me();
+    if (user?.role !== "admin") throw redirect({ to: "/" });
   },
   component: AdminLayout,
 });
